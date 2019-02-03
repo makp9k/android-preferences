@@ -1,0 +1,81 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'maven'
+
+android {
+    compileSdkVersion buildConfig.compileSdk
+
+    defaultConfig {
+        minSdkVersion buildConfig.minSdk
+        consumerProguardFiles 'proguard-rules.pro'
+
+        versionName buildConfig.version['name']
+        versionCode buildConfig.version['code']
+
+        testInstrumentationRunner 'android.support.test.runner.AndroidJUnitRunner'
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+        test.java.srcDirs += 'src/test/kotlin'
+    }
+}
+
+configurations {
+    deployerJars
+}
+
+dependencies {
+    testImplementation deps.junit
+    testImplementation deps.assertj
+    implementation deps.kotlin
+    compileOnly deps.android.databinding.library
+    testImplementation deps.android.databinding.library
+
+    deployerJars "org.apache.maven.wagon:wagon-ftp:2.10"
+}
+
+task androidSourcesJar(type: Jar) {
+    classifier = 'sources'
+    from android.sourceSets.main.java.srcDirs
+}
+
+uploadArchives {
+    repositories.mavenDeployer {
+        configuration = configurations.deployerJars
+        if (project.hasProperty("repositoryUrl")) {
+            repository(url: "$repositoryUrl") {
+                if (project.hasProperty("mavenUser")) {
+                    authentication(
+                            userName: "$mavenUser",
+                            password: "$mavenPassword"
+                    )
+                }
+            }
+        }
+
+        pom.project {
+            groupId GROUP
+            version = buildConfig.version['name']
+            artifactId POM_ARTIFACT_ID
+
+            licenses {
+                license {
+                    name POM_LICENCE_NAME
+                    url POM_LICENCE_URL
+                    distribution POM_LICENCE_DIST
+                }
+            }
+
+            developers {
+                developer {
+                    name 'Leonid Zavodnik'
+                }
+            }
+        }
+    }
+}
+
+artifacts {
+    archives androidSourcesJar
+}
